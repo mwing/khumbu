@@ -12,7 +12,7 @@ project/plugins/project/
 # Scala-IDE specific
 .scala_dependencies
 
-src/main/resources/AwsCredentials.properties
+src/main/resources/Khumbu.properties
 
 .idea
 .idea_modules
