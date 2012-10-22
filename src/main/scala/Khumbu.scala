@@ -1,14 +1,11 @@
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sqs.AmazonSQSClient
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.glacier.AmazonGlacierClient;
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager;
-import com.amazonaws.services.glacier.transfer.UploadResult;
 
 class Khumbu {
   lazy val vaultName = "testing"
