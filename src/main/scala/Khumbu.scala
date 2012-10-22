@@ -14,6 +14,9 @@ class Khumbu {
   lazy val vaultName = "testing"
   val region = "eu-west-1"
   lazy val endpoint = "glacier." + region + ".amazonaws.com"
+  /*
+    Put AwsCredentials.properties to folder src/main/resources for this to work!
+   */
   lazy val credentials = new PropertiesCredentials(this.getClass.getResourceAsStream("AwsCredentials.properties"))
   val archiveId = "Q7gLvT9jCc6h0C04O0PnjdqAYrdtJ4sQ_IK3GbLZq4bFzevdaqNsS7VtBnFtfD7rt-JR-Rr7r1Lk3tO-XaVPbYGwCKQN-aRRSojD0AMT0Qiza8qq9CSV_qROI0WFTvzz3Q8YuoYHVw"
   def client():AmazonGlacierClient = {
