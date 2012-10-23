@@ -1,14 +1,10 @@
-import com.amazonaws.auth.{BasicAWSCredentials, PropertiesCredentials}
+import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sqs.AmazonSQSClient
 import java.io.File;
-
-
-
 import com.amazonaws.services.glacier.AmazonGlacierClient;
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
 import java.util.{Properties, Date}
-;
 
 class Khumbu {
   val properties = new Properties()
