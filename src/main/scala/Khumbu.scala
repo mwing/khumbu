@@ -1,12 +1,14 @@
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.services.glacier.model.{ListVaultsRequest, DeleteVaultRequest, CreateVaultRequest, DeleteArchiveRequest}
+import com.amazonaws.services.glacier.model._
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sqs.AmazonSQSClient
-import java.io.File;
+
 import com.amazonaws.services.glacier.AmazonGlacierClient;
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager
-import java.util.{Properties, Date}
+import java.io.{InputStream, File}
+import java.util.Properties
 import collection.JavaConverters._
+import scala.io.Source
 
 class Khumbu {
   val properties = new Properties()
@@ -59,17 +61,58 @@ class Khumbu {
     val vaultList = client().listVaults(new ListVaultsRequest()).getVaultList.asScala
     vaultList foreach {v => println(v)}
   }
+
+  def startVaultInventoryJob(vault:String): String = {
+    client().initiateJob(new InitiateJobRequest().withVaultName(vault).withJobParameters(new JobParameters().withType("inventory-retrieval"))).getJobId
+  }
+
+  def getInventory(vault: String, jobId: String) = {
+    val is = client().getJobOutput(new GetJobOutputRequest().withVaultName(vault).withJobId(jobId))
+    Source.fromInputStream(is.getBody).getLines().mkString("\n")
+  }
+
+  def waitForJob(vault: String, jobId: String) {
+    val jobNotCompleted = !client().describeJob(new DescribeJobRequest().withVaultName(vault).withJobId(jobId)).isCompleted
+    while (jobNotCompleted) {
+      Thread.sleep(1000L * 60) // wait a minute
+      print(".")
+    }
+  }
 }
 
 object Khumbu extends App {
   val khumbu = new Khumbu()
   val vaultName = "testVault"
+  
+  println("list vaults: ")
   khumbu.listVaults()
+  
+  println("creating vault (if it doesn't exist")
   khumbu.createVault(vaultName)
+
+  println("uploading file")
   val id = khumbu.upload(vaultName, "test.file")
   println("archiveId from upload : " + id)
-  khumbu.download(vaultName, id)
+
+//  println("download file")
+//  khumbu.download(vaultName, id)
+
+  println("deleting file")
   khumbu.delete(vaultName, id)
+
+//  println("deleting vault")
 //  khumbu.deleteVault("testVault") // will break because vault was just written to
-  
+
+  val existingVault = "testing"
+
+  println("start inventory job")
+  val jobId = khumbu.startVaultInventoryJob(existingVault)
+  println("inventory job id: " + jobId)
+
+  println("poll for inventory")
+  khumbu.waitForJob(existingVault, jobId)
+
+  println("getting inventory")
+  val inventory = khumbu.getInventory(existingVault, jobId)
+  println(inventory)
 }
