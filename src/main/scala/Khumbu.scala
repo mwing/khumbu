@@ -1,3 +1,4 @@
+import collection.immutable
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.glacier.model._
 import com.amazonaws.services.sns.AmazonSNSClient
@@ -22,13 +23,13 @@ class Khumbu {
    */
   val credentials = new BasicAWSCredentials(properties.getProperty("accessKey"), properties.getProperty("secretKey"))
 
-  def client():AmazonGlacierClient = {
+  def client(): AmazonGlacierClient = {
     val client = new AmazonGlacierClient(credentials)
     client.setEndpoint(endpoint)
     client
   }
 
-  def manager() : ArchiveTransferManager = {
+  def manager(): ArchiveTransferManager = {
     val sns = new AmazonSNSClient(credentials);
     val sqs = new AmazonSQSClient(credentials);
     sns.setEndpoint(snsEndpoint)
@@ -36,7 +37,7 @@ class Khumbu {
     new ArchiveTransferManager(client(), sqs, sns)
   }
 
-  def upload(vault: String, file:String) = {
+  def upload(vault: String, file: String) = {
     val result = manager().upload(vault, "test file to upload", new File(file))
     result.getArchiveId
   }
@@ -45,7 +46,7 @@ class Khumbu {
     manager().download(vault, id, new File("/Users/miso/tmp/test.file"))
   }
 
-  def delete(vault: String,  id: String) {
+  def delete(vault: String, id: String) {
     client().deleteArchive(new DeleteArchiveRequest().withVaultName(vault).withArchiveId(id))
   }
 
@@ -59,10 +60,12 @@ class Khumbu {
 
   def listVaults() {
     val vaultList = client().listVaults(new ListVaultsRequest()).getVaultList.asScala
-    vaultList foreach {v => println(v)}
+    vaultList foreach {
+      v => println(v)
+    }
   }
 
-  def startVaultInventoryJob(vault:String): String = {
+  def startVaultInventoryJob(vault: String): String = {
     client().initiateJob(new InitiateJobRequest().withVaultName(vault).withJobParameters(new JobParameters().withType("inventory-retrieval"))).getJobId
   }
 
@@ -80,39 +83,53 @@ class Khumbu {
   }
 }
 
-object Khumbu extends App {
-  val khumbu = new Khumbu()
-  val vaultName = "testVault"
+object Khumbu {
+
+  def processArgs(argMap: immutable.Map[String, String], args: List[String]): Map[String, String] = args match {
+    case "-v" :: vault :: rest => processArgs(argMap + (("vault" -> vault)), rest)
+    case "-d" :: directory :: rest => processArgs(argMap + (("directory" -> directory)), rest)
+    case "-a" :: action :: rest => processArgs(argMap + (("action" -> action)), rest)
+    case Nil => argMap
+    case _ => argMap // not handled
+  }
   
-  println("list vaults: ")
-  khumbu.listVaults()
-  
-  println("creating vault (if it doesn't exist")
-  khumbu.createVault(vaultName)
+  def main(args: Array[String]) {
+    val options = processArgs(Map(), args.toList)
+    println(options)
 
-  println("uploading file")
-  val id = khumbu.upload(vaultName, "test.file")
-  println("archiveId from upload : " + id)
+    val khumbu = new Khumbu()
+    val vaultName = "testVault"
 
-//  println("download file")
-//  khumbu.download(vaultName, id)
+    println("list vaults: ")
+    khumbu.listVaults()
 
-  println("deleting file")
-  khumbu.delete(vaultName, id)
+    println("creating vault (if it doesn't exist")
+    khumbu.createVault(vaultName)
 
-//  println("deleting vault")
-//  khumbu.deleteVault("testVault") // will break because vault was just written to
+    println("uploading file")
+    val id = khumbu.upload(vaultName, "test.file")
+    println("archiveId from upload : " + id)
 
-  val existingVault = "testing"
+    //  println("download file")
+    //  khumbu.download(vaultName, id)
 
-  println("start inventory job")
-  val jobId = khumbu.startVaultInventoryJob(existingVault)
-  println("inventory job id: " + jobId)
+    println("deleting file")
+    khumbu.delete(vaultName, id)
 
-  println("poll for inventory")
-  khumbu.waitForJob(existingVault, jobId)
+    //  println("deleting vault")
+    //  khumbu.deleteVault("testVault") // will break because vault was just written to
 
-  println("getting inventory")
-  val inventory = khumbu.getInventory(existingVault, jobId)
-  println(inventory)
+    val existingVault = "testing"
+
+    println("start inventory job")
+    val jobId = khumbu.startVaultInventoryJob(existingVault)
+    println("inventory job id: " + jobId)
+
+    println("poll for inventory")
+    khumbu.waitForJob(existingVault, jobId)
+
+    println("getting inventory")
+    val inventory = khumbu.getInventory(existingVault, jobId)
+    println(inventory)
+  }
 }
